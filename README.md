@@ -3,7 +3,11 @@ Command line tool for importing Apache logs into an sqlite3 database
 
 ## Flags:
 
-    TODO
+    Usage: plasmasword [--db filename] [-a | -e] filename ...
+    
+        --db      Sqlite3 database filename. Defaults to parkrun.db
+        -a        Force loading filename as an access log
+        -e        Force loading filename as an error log
 
 ## Prerequisites:
 
