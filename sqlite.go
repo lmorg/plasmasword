@@ -3,12 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
-
 	"github.com/lmorg/apachelogs"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
 	"strings"
-	"sync"
 )
 
 const (
@@ -48,10 +46,7 @@ const (
 	sqlSyncToDisk = `INSERT INTO main.access SELECT * FROM mem.access;`
 )
 
-var (
-	db    *sql.DB
-	mutex = &sync.Mutex{}
-)
+var db *sql.DB
 
 const errAlreadyExists = "already exists"
 
@@ -81,6 +76,7 @@ func OpenDB() {
 	}
 
 	// views
+	log.Println("Adding views")
 	view := func(sql string) {
 		_, err = db.Exec(sql)
 		if err != nil && !strings.HasSuffix(err.Error(), errAlreadyExists) {
@@ -95,11 +91,9 @@ func OpenDB() {
 	view(viewCount304)
 	view(viewCountSize)
 	view(viewListViews)
-
 }
 
 func InsertAccess(access *apachelogs.AccessLog) {
-	mutex.Lock()
 	_, err := db.Exec(sqlInsertAccess,
 		access.IP,
 		access.Method,
@@ -117,7 +111,6 @@ func InsertAccess(access *apachelogs.AccessLog) {
 		access.UserID,
 		access.FileName,
 	)
-	mutex.Unlock()
 
 	if err != nil {
 		log.Println("Error inserting access log:", err)

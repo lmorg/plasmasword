@@ -7,7 +7,7 @@ const (
 		FROM access
 		ORDER BY datetime DESC;`
 
-	// latests:
+	// latest:
 	viewLatestNon200 = `CREATE VIEW latest_non_200 AS
 		SELECT datetime, status, uri
 		FROM access

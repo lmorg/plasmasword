@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/lmorg/apachelogs"
 	"log"
-	"sync"
 )
 
 const Version = "0.1 ALPHA"
@@ -27,22 +26,11 @@ func main() {
 }
 
 func ReadLogs() {
-	var wg sync.WaitGroup
-
 	for i := range fLogAccess {
-		wg.Add(1)
 		completed = ((float32(i) + 1) / float32(len(fLogAccess))) * 100
-		ReadAccess(fLogAccess[i], &wg)
+		apachelogs.ReadAccessLog(fLogAccess[i], InsertAccess, Error)
+		log.Printf("%3.0f%% Loaded %s", completed, fLogAccess[i])
 	}
-
-	wg.Wait()
-
-}
-
-func ReadAccess(filename string, wg *sync.WaitGroup) {
-	apachelogs.ReadAccessLog(filename, InsertAccess, Error)
-	log.Printf("%3.0f%% Loaded %s", completed, filename)
-	wg.Done()
 }
 
 func Error(err error) {
