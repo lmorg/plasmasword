@@ -11,23 +11,24 @@ import (
 
 const (
 	sqlCreateTable = `CREATE TABLE IF NOT EXISTS %s.access (
-							id 			integer PRIMARY KEY,
+							id          integer PRIMARY KEY,
 							ip          string,
 							method      string,
-							proc    	integer,
-							proto		string,
-							qs      	string,
+							proc        integer,
+							proto       string,
+							qs          string,
 							ref         string,
-							size 		integer,
-							status    	integer,
+							size        integer,
+							status      integer,
 							datetime    datetime,
 							uri         string,
-							ua    		string,
-							uid   		string,
-							file    	string
+							ua          string,
+							uid         string,
+							file        string
 						);`
 
 	sqlInsertAccess = `INSERT INTO mem.access (
+							id,
 							ip,
 							method,
 							proc,
@@ -41,14 +42,28 @@ const (
 							ua,
 							uid,
 							file
-						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
-	sqlSyncToDisk = `INSERT INTO main.access SELECT * FROM mem.access;`
+	sqlCreateStatuses = `CREATE TABLE IF NOT EXISTS %s.status (
+							status      integer PRIMARY KEY,
+							title       string,
+							desc        string
+						);`
+
+	sqlInsertStatus = `INSERT INTO mem.status (
+							status,
+							title,
+							desc
+						) VALUES (?, ?, ?);`
+
+	sqlSyncToDisk = `INSERT INTO main.access SELECT * FROM mem.access; DELETE FROM mem.access;`
+	sqlSyncStatus = `INSERT INTO main.status SELECT * FROM mem.status; DROP TABLE mem.status;`
 )
 
-var db *sql.DB
-
-const errAlreadyExists = "already exists"
+var (
+	db  *sql.DB
+	aid uint
+)
 
 func OpenDB() {
 	var err error
@@ -60,41 +75,63 @@ func OpenDB() {
 		log.Fatalln("Could not open database:", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf(sqlCreateTable, "main"))
-	if err != nil {
-		log.Fatalln("Could not create table:", err)
+	if _, err = db.Exec(fmt.Sprintf(sqlCreateTable, "main")); err != nil {
+		log.Fatalln("Could not create main.access table:", err)
 	}
 
-	_, err = db.Exec(`ATTACH DATABASE ':memory:' AS mem;`)
-	if err != nil {
+	if _, err = db.Exec(`ATTACH DATABASE ':memory:' AS mem;`); err != nil {
 		log.Fatalln("Could not create in memory database")
 	}
 
-	_, err = db.Exec(fmt.Sprintf(sqlCreateTable, "mem"))
-	if err != nil {
-		log.Fatalln("Could not create memory table:", err)
+	if _, err = db.Exec(fmt.Sprintf(sqlCreateTable, "mem")); err != nil {
+		log.Fatalln("Could not create mem.access table:", err)
+	}
+
+	// statuses
+	log.Println("Adding status table")
+	if _, err = db.Exec(fmt.Sprintf(sqlCreateStatuses, "main")); err != nil {
+		log.Fatalln("Could not create main.status table:", err)
+	}
+	if _, err = db.Exec(fmt.Sprintf(sqlCreateStatuses, "mem")); err != nil {
+		log.Fatalln("Could not create mem.status table:", err)
+	}
+
+	for status := range statusTitle {
+		if _, err := db.Exec(sqlInsertStatus,
+			status,
+			statusTitle[status],
+			statusDescription[status],
+		); err != nil {
+			log.Println("Error inserting status record:", err)
+		}
+	}
+
+	if _, err = db.Exec(sqlSyncStatus); err != nil {
+		log.Println("Error syncing statuses to disk:", err)
 	}
 
 	// views
 	log.Println("Adding views")
-	view := func(sql string) {
-		_, err = db.Exec(sql)
-		if err != nil && !strings.HasSuffix(err.Error(), errAlreadyExists) {
-			log.Println("Could not create view:", err)
-		}
+	_, err = db.Exec(fmt.Sprint(
+		viewAll,
+		viewLatestNon200,
+		viewLatestProc,
+		viewLatest304,
+		viewCountStatus,
+		viewCount304,
+		viewCountSize,
+		viewListViews,
+	))
+	if err != nil && !strings.HasSuffix(err.Error(), "already exists") {
+		log.Println("Could not create views:", err)
 	}
-	view(viewAll)
-	view(viewLatestNon200)
-	view(viewLatestProc)
-	view(viewLatest304)
-	view(viewCountStatus)
-	view(viewCount304)
-	view(viewCountSize)
-	view(viewListViews)
+
 }
 
 func InsertAccess(access *apachelogs.AccessLog) {
+	aid++
 	_, err := db.Exec(sqlInsertAccess,
+		aid,
 		access.IP,
 		access.Method,
 		access.ProcTime,
@@ -103,8 +140,6 @@ func InsertAccess(access *apachelogs.AccessLog) {
 		access.Referrer,
 		access.Size,
 		access.Status.I,
-		//access.Status.Title(),       // will put this in separate table
-		//access.Status.Description(), // will put this in separate table
 		access.DateTime,
 		access.URI,
 		access.UserAgent,
@@ -119,10 +154,11 @@ func InsertAccess(access *apachelogs.AccessLog) {
 	return
 }
 
-func SyncDbToDisk() (err error) {
-	log.Println("Syncing memory to", fDbFileName)
-	_, err = db.Exec(sqlSyncToDisk)
-	return
+func SyncDbToDisk() {
+	//log.Println("Syncing memory to", fDbFileName)
+	if _, err := db.Exec(sqlSyncToDisk); err != nil {
+		log.Println("Error syncing to disk:", err)
+	}
 }
 
 func CloseDB() {

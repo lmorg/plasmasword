@@ -28,10 +28,10 @@ const (
 
 	// counts:
 	viewCountStatus = `CREATE VIEW count_status AS
-		SELECT count(*) "#", status
+		SELECT status, count(*) "#"
 		FROM access
 		GROUP BY status
-		ORDER BY 1 DESC;`
+		ORDER BY 1 ASC;`
 
 	viewCount304 = `CREATE VIEW count_304 AS
 		SELECT count(status) "#", uri

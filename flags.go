@@ -39,7 +39,7 @@ func Usage() {
 	fmt.Print(`
 Usage: plasmasword [--db filename] [-a | -e] filename ...
 
-    --db      Sqlite3 database filename. Defaults to parkrun.db
+    --db      Sqlite3 database filename. Defaults to plasmasword.db
     -a        Force loading filename as an access log
     -e        Force loading filename as an error log
 `)
