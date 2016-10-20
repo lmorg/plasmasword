@@ -56,8 +56,10 @@ const (
 							desc
 						) VALUES (?, ?, ?);`
 
-	sqlSyncToDisk = `INSERT INTO main.access SELECT * FROM mem.access; DELETE FROM mem.access;`
-	sqlSyncStatus = `INSERT INTO main.status SELECT * FROM mem.status; DROP TABLE mem.status;`
+	sqlSyncToDisk     = `INSERT INTO main.access SELECT * FROM mem.access;`
+	sqlPurgeMemAccess = `DELETE FROM mem.access;`
+	sqlSyncStatus     = `INSERT INTO main.status SELECT * FROM mem.status;`
+	sqlPergeMemStatus = `DROP TABLE mem.status;`
 )
 
 var (
@@ -109,6 +111,7 @@ func OpenDB() {
 	if _, err = db.Exec(sqlSyncStatus); err != nil {
 		log.Println("Error syncing statuses to disk:", err)
 	}
+	db.Exec(sqlPergeMemStatus)
 
 	// views
 	log.Println("Adding views")
@@ -155,10 +158,10 @@ func InsertAccess(access *apachelogs.AccessLog) {
 }
 
 func SyncDbToDisk() {
-	//log.Println("Syncing memory to", fDbFileName)
 	if _, err := db.Exec(sqlSyncToDisk); err != nil {
 		log.Println("Error syncing to disk:", err)
 	}
+	db.Exec(sqlPurgeMemAccess)
 }
 
 func CloseDB() {
