@@ -59,7 +59,7 @@ const (
 	sqlSyncToDisk     = `INSERT INTO main.access SELECT * FROM mem.access;`
 	sqlPurgeMemAccess = `DELETE FROM mem.access;`
 	sqlSyncStatus     = `INSERT INTO main.status SELECT * FROM mem.status;`
-	sqlPergeMemStatus = `DROP TABLE mem.status;`
+	sqlPurgeMemStatus = `DROP TABLE mem.status;`
 )
 
 var (
@@ -111,7 +111,7 @@ func OpenDB() {
 	if _, err = db.Exec(sqlSyncStatus); err != nil {
 		log.Println("Error syncing statuses to disk:", err)
 	}
-	db.Exec(sqlPergeMemStatus)
+	db.Exec(sqlPurgeMemStatus)
 
 	// views
 	log.Println("Adding views")
