@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-const Version = "0.3 BETA"
+const Version = "0.4 BETA"
 
 var completed float32
 
@@ -22,9 +22,10 @@ func ReadLogs() {
 	log.Println("Adding access table")
 	for i := range fLogAccess {
 		completed = ((float32(i) + 1) / float32(len(fLogAccess))) * 100
+		BeginTransaction()
 		apachelogs.ReadAccessLog(fLogAccess[i], InsertAccess, Error)
-		SyncDbToDisk()
-		log.Printf("%5.0f%% Loaded %s (%d records total)", completed, fLogAccess[i], aid)
+		CommitTransaction()
+		log.Printf("%5.0f%% Loaded %s (%d records total)", completed, fLogAccess[i], accessId)
 	}
 
 	/*log.Println("Adding error table")

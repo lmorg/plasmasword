@@ -1,5 +1,3 @@
-// +build ignore
-
 package main
 
 import (
@@ -12,7 +10,7 @@ import (
 )
 
 const (
-	sqlCreateTable = `CREATE TABLE IF NOT EXISTS %s.access (
+	sqlCreateTable = `CREATE TABLE IF NOT EXISTS access (
 							id          integer PRIMARY KEY,
 							ip          string,
 							method      string,
@@ -29,7 +27,7 @@ const (
 							file        string
 						);`
 
-	sqlInsertAccess = `INSERT INTO mem.access (
+	sqlInsertAccess = `INSERT INTO access (
 							id,
 							ip,
 							method,
@@ -46,26 +44,22 @@ const (
 							file
 						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
-	sqlCreateStatuses = `CREATE TABLE IF NOT EXISTS %s.status (
+	sqlCreateStatuses = `CREATE TABLE IF NOT EXISTS status (
 							status      integer PRIMARY KEY,
 							title       string,
 							desc        string
 						);`
 
-	sqlInsertStatus = `INSERT INTO mem.status (
+	sqlInsertStatus = `INSERT INTO status (
 							status,
 							title,
 							desc
 						) VALUES (?, ?, ?);`
-
-	sqlSyncToDisk     = `INSERT INTO main.access SELECT * FROM mem.access;`
-	sqlPurgeMemAccess = `DELETE FROM mem.access;`
-	sqlSyncStatus     = `INSERT INTO main.status SELECT * FROM mem.status;`
-	sqlPurgeMemStatus = `DROP TABLE mem.status;`
 )
 
 var (
 	db       *sql.DB
+	tx       *sql.Tx
 	accessId uint
 )
 
@@ -74,34 +68,26 @@ func OpenDB() {
 
 	log.Println("Opening database")
 
-	db, err = sql.Open("sqlite3", fmt.Sprintf("file:%s", fDbFileName))
-	if err != nil {
+	if db, err = sql.Open("sqlite3", "file:"+fDbFileName); err != nil {
 		log.Fatalln("Could not open database:", err)
 	}
 
-	if _, err = db.Exec(fmt.Sprintf(sqlCreateTable, "main")); err != nil {
-		log.Fatalln("Could not create main.access table:", err)
+	if tx, err = db.Begin(); err != nil {
+		log.Fatalln("Could not open transaction:", err)
 	}
 
-	if _, err = db.Exec(`ATTACH DATABASE ':memory:' AS mem;`); err != nil {
-		log.Fatalln("Could not create in memory database")
-	}
-
-	if _, err = db.Exec(fmt.Sprintf(sqlCreateTable, "mem")); err != nil {
-		log.Fatalln("Could not create mem.access table:", err)
+	if _, err = tx.Exec(sqlCreateTable); err != nil {
+		log.Fatalln("Could not create access table:", err)
 	}
 
 	// statuses
 	log.Println("Adding status table")
-	if _, err = db.Exec(fmt.Sprintf(sqlCreateStatuses, "main")); err != nil {
+	if _, err = tx.Exec(sqlCreateStatuses); err != nil {
 		log.Fatalln("Could not create main.status table:", err)
-	}
-	if _, err = db.Exec(fmt.Sprintf(sqlCreateStatuses, "mem")); err != nil {
-		log.Fatalln("Could not create mem.status table:", err)
 	}
 
 	for status := range statusTitle {
-		if _, err := db.Exec(sqlInsertStatus,
+		if _, err := tx.Exec(sqlInsertStatus,
 			status,
 			statusTitle[status],
 			statusDescription[status],
@@ -110,14 +96,9 @@ func OpenDB() {
 		}
 	}
 
-	if _, err = db.Exec(sqlSyncStatus); err != nil {
-		log.Println("Error syncing statuses to disk:", err)
-	}
-	db.Exec(sqlPurgeMemStatus)
-
 	// views
 	log.Println("Adding views")
-	_, err = db.Exec(fmt.Sprint(
+	_, err = tx.Exec(fmt.Sprint(
 		viewAll,
 		viewLatestNon200,
 		viewLatestProc,
@@ -131,11 +112,15 @@ func OpenDB() {
 		log.Println("Could not create views:", err)
 	}
 
+	if err = tx.Commit(); err != nil {
+		log.Println("Could not commit transaction:", err)
+	}
+
 }
 
 func InsertAccess(access *apachelogs.AccessLog) {
 	accessId++
-	_, err := db.Exec(sqlInsertAccess,
+	_, err := tx.Exec(sqlInsertAccess,
 		accessId,
 		access.IP,
 		access.Method,
@@ -159,11 +144,17 @@ func InsertAccess(access *apachelogs.AccessLog) {
 	return
 }
 
-func SyncDbToDisk() {
-	if _, err := db.Exec(sqlSyncToDisk); err != nil {
-		log.Println("Error syncing to disk:", err)
+func BeginTransaction() {
+	var err error
+	if tx, err = db.Begin(); err != nil {
+		log.Fatalln("Could not open transaction:", err)
 	}
-	db.Exec(sqlPurgeMemAccess)
+}
+
+func CommitTransaction() {
+	if err := tx.Commit(); err != nil {
+		log.Println("Error commiting access:", err)
+	}
 }
 
 func CloseDB() {
