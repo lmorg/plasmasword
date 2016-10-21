@@ -4,29 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/lmorg/apachelogs"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"strings"
 )
 
 const (
-	sqlCreateTable = `CREATE TABLE IF NOT EXISTS access (
-							id          integer PRIMARY KEY,
-							ip          string,
-							method      string,
-							proc        integer,
-							proto       string,
-							qs          string,
-							ref         string,
-							size        integer,
-							status      integer,
-							datetime    datetime,
-							uri         string,
-							ua          string,
-							uid         string,
-							file        string
-						);`
-
 	sqlInsertAccess = `INSERT INTO access (
 							id,
 							ip,
@@ -43,12 +25,6 @@ const (
 							uid,
 							file
 						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-
-	sqlCreateStatuses = `CREATE TABLE IF NOT EXISTS status (
-							status      integer PRIMARY KEY,
-							title       string,
-							desc        string
-						);`
 
 	sqlInsertStatus = `INSERT INTO status (
 							status,
@@ -68,9 +44,7 @@ func OpenDB() {
 
 	log.Println("Opening database")
 
-	if db, err = sql.Open("sqlite3", "file:"+fDbFileName); err != nil {
-		log.Fatalln("Could not open database:", err)
-	}
+	openSqlite3()
 
 	if tx, err = db.Begin(); err != nil {
 		log.Fatalln("Could not open transaction:", err)
