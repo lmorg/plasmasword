@@ -3,14 +3,14 @@ Command line tool for importing Apache logs into an sqlite3 database (currently 
 
 ## Flags:
 
-Usage: plasmasword [-d sqlite3 | mysql ] [--connect string ] [-a | -e] filename ...
-    -d        Database driver (Defaults to sqlite3)
-    --connect Database connection string (Defaults to plasmasword.db):
-              sqlite3: filename.db
-              mysql:   username:password@tcp(server:portnumber)/schema
-    -a        Force loading filename as an access log
-    -e        Force loading filename as an error log
-Files without an -a nor -e flag will be assumed an access log unless the filename contains the string "err"
+	Usage: plasmasword [-d sqlite3 | mysql ] [--connect string ] [-a | -e] filename ...
+	    -d        Database driver (Defaults to sqlite3)
+	    --connect Database connection string (Defaults to plasmasword.db):
+		      sqlite3: filename.db
+		      mysql:   username:password@tcp(server:portnumber)/schema
+	    -a        Force loading filename as an access log
+	    -e        Force loading filename as an error log
+	Files without an -a nor -e flag will be assumed an access log unless the filename contains the string "err"
 
 ## Prerequisites:
 
