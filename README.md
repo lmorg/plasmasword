@@ -8,8 +8,8 @@ Command line tool for importing Apache logs into an sqlite3 database (currently 
 	    -d        Database driver (Defaults to sqlite3)
 	    
 	    --connect Database connection string (Defaults to plasmasword.db):
-		      sqlite3: filename.db
-		      mysql:   username:password@tcp(server:portnumber)/schema
+	              sqlite3: filename.db
+	              mysql:   username:password@tcp(server:portnumber)/schema
 		      
 	    -a        Force loading filename as an access log
 	    -e        Force loading filename as an error log
