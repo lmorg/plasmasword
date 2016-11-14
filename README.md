@@ -1,5 +1,5 @@
 # plasmasword
-Command line tool for importing Apache logs into an sqlite3 database (currently error logs are unsupported)
+Command line tool for importing Apache logs into a database (multiple databases are supported)
 
 ## Flags:
 
