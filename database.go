@@ -26,32 +26,72 @@ const (
 							file
 						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
+	sqlInsertError = `INSERT INTO error (
+							id,
+							file,
+							datetime,
+							timestamped,
+							message,
+							scope1,
+							scope2,
+							scope3,
+							scope4,
+							scope5,
+							scope6,
+							scope7,
+							scope8,
+							scope9,
+							scope10
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+
 	sqlInsertStatus = `INSERT INTO status (
 							status,
 							title,
 							desc
 						) VALUES (?, ?, ?);`
+
+	errCouldNotOpenDb = "Could not open database:"
 )
 
 var (
-	db       *sql.DB
-	tx       *sql.Tx
-	accessId uint
+	db         *sql.DB
+	tx         *sql.Tx
+	accessId   uint
+	errorId    uint
+	dbEngine   map[string]func() = make(map[string]func())
+	fDbDriver  string
+	fDbConnStr string
+	//fDbFileName   string
+	//fDbUserName   string
+	//fDbPassword   string
+	//fDbHostName   string
+	//fDbPortNumber string
+	//fDbSchema     string
 )
+
+var emptyScopes []string = make([]string, 10)
 
 func OpenDB() {
 	var err error
 
 	log.Println("Opening database")
 
-	openSqlite3()
+	if dbEngine[fDbDriver] != nil {
+		dbEngine[fDbDriver]()
+	} else {
+		log.Fatalln("Database driver", fDbDriver, "does not exist.")
+	}
 
 	if tx, err = db.Begin(); err != nil {
 		log.Fatalln("Could not open transaction:", err)
 	}
 
-	if _, err = tx.Exec(sqlCreateTable); err != nil {
+	if _, err = tx.Exec(sqlCreateAccess); err != nil {
 		log.Fatalln("Could not create access table:", err)
+	}
+
+	if _, err = tx.Exec(sqlCreateError); err != nil {
+		log.Fatalln("Could not create error table:", err)
 	}
 
 	// statuses
@@ -60,11 +100,11 @@ func OpenDB() {
 		log.Fatalln("Could not create main.status table:", err)
 	}
 
-	for status := range statusTitle {
+	for status := range apachelogs.StatusTitle {
 		if _, err := tx.Exec(sqlInsertStatus,
 			status,
-			statusTitle[status],
-			statusDescription[status],
+			apachelogs.StatusTitle[status],
+			apachelogs.StatusDescription[status],
 		); err != nil {
 			log.Println("Error inserting status record:", err)
 		}
@@ -92,7 +132,7 @@ func OpenDB() {
 
 }
 
-func InsertAccess(access *apachelogs.AccessLog) {
+func InsertAccess(access *apachelogs.AccessLine) {
 	accessId++
 	_, err := tx.Exec(sqlInsertAccess,
 		accessId,
@@ -116,6 +156,54 @@ func InsertAccess(access *apachelogs.AccessLog) {
 	}
 
 	return
+}
+
+func InsertError(error *apachelogs.ErrorLine) {
+	//TODO: i := len(error.scope) ??? Benchmarking needed.
+	var scope []string
+	switch {
+	case len(error.Scope) < 10:
+		scope = append(error.Scope, emptyScopes[:10-len(error.Scope)]...)
+
+	case len(error.Scope) == 10:
+		scope = error.Scope
+
+	case len(error.Scope) > 10:
+		scope = error.Scope[:9]
+	}
+
+	errorId++
+	_, err := tx.Exec(sqlInsertError,
+		errorId,
+		error.FileName,
+		error.DateTime,
+		boolToYN(error.HasTimestamp),
+		error.Message,
+		scope[0],
+		scope[1],
+		scope[2],
+		scope[3],
+		scope[4],
+		scope[5],
+		scope[6],
+		scope[7],
+		scope[8],
+		scope[9],
+	)
+
+	if err != nil {
+		log.Println("Error inserting error log:", err)
+	}
+
+	return
+}
+
+// Convert a bool type to Y/N
+func boolToYN(tf bool) string {
+	if tf {
+		return "Y"
+	}
+	return "N"
 }
 
 func BeginTransaction() {

@@ -1,3 +1,5 @@
+//// +build ignore
+
 package main
 
 import (
@@ -6,6 +8,7 @@ import (
 	"log"
 )
 
+/*
 const (
 	sqlCreateTable = `CREATE TABLE IF NOT EXISTS access (
 							id          INTEGER PRIMARY KEY,
@@ -30,10 +33,17 @@ const (
 							desc        TEXT
 						);`
 )
+*/
+func init() {
+	dbEngine["sqlite3"] = openSqlite3
+}
 
 func openSqlite3() {
 	var err error
-	if db, err = sql.Open("sqlite3", "file:"+fDbFileName); err != nil {
-		log.Fatalln("Could not open database:", err)
+	//if db, err = sql.Open("sqlite3", "file:"+fDbFileName); err != nil {
+	//	log.Fatalln(errCouldNotOpenDb, err)
+	//}
+	if db, err = sql.Open("sqlite3", "file:"+fDbConnStr); err != nil {
+		log.Fatalln(errCouldNotOpenDb, err)
 	}
 }

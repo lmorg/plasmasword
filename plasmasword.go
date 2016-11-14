@@ -28,12 +28,14 @@ func ReadLogs() {
 		log.Printf("%5.0f%% Loaded %s (%d records total)", completed, fLogAccess[i], accessId)
 	}
 
-	/*log.Println("Adding error table")
+	log.Println("Adding error table")
 	for i := range fLogError {
 		completed = ((float32(i) + 1) / float32(len(fLogError))) * 100
-		apachelogs.ReadAccessLog(fLogError[i], InsertAccess, Error)
+		BeginTransaction()
+		apachelogs.ReadErrorLog(fLogError[i], InsertError, Error)
+		CommitTransaction()
 		log.Printf("%5.0f%% Loaded %s", completed, fLogError[i])
-	}*/
+	}
 }
 
 func Error(err error) {
