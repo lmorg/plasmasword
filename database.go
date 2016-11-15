@@ -28,10 +28,8 @@ const (
 
 	sqlInsertError = `INSERT INTO error (
 							id,
-							file,
 							datetime,
 							timestamped,
-							message,
 							scope1,
 							scope2,
 							scope3,
@@ -41,7 +39,9 @@ const (
 							scope7,
 							scope8,
 							scope9,
-							scope10
+							scope10,
+							message,
+							file
 						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
 	sqlInsertStatus = `INSERT INTO status (
@@ -159,26 +159,27 @@ func InsertAccess(access *apachelogs.AccessLine) {
 }
 
 func InsertError(error *apachelogs.ErrorLine) {
-	//TODO: i := len(error.scope) ??? Benchmarking needed.
-	var scope []string
-	switch {
-	case len(error.Scope) < 10:
-		scope = append(error.Scope, emptyScopes[:10-len(error.Scope)]...)
+	var (
+		scope    []string
+		lenScope int = len(error.Scope)
+	)
 
-	case len(error.Scope) == 10:
+	switch {
+	case lenScope < 10:
+		scope = append(error.Scope, emptyScopes[:10-lenScope]...)
+
+	case lenScope == 10:
 		scope = error.Scope
 
-	case len(error.Scope) > 10:
+	case lenScope > 10:
 		scope = error.Scope[:9]
 	}
 
 	errorId++
 	_, err := tx.Exec(sqlInsertError,
 		errorId,
-		error.FileName,
 		error.DateTime,
 		boolToYN(error.HasTimestamp),
-		error.Message,
 		scope[0],
 		scope[1],
 		scope[2],
@@ -189,6 +190,8 @@ func InsertError(error *apachelogs.ErrorLine) {
 		scope[7],
 		scope[8],
 		scope[9],
+		error.Message,
+		error.FileName,
 	)
 
 	if err != nil {

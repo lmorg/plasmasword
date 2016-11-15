@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-const Version = "0.4 BETA"
+const Version = "0.5 BETA"
 
 var completed float32
 
@@ -34,7 +34,7 @@ func ReadLogs() {
 		BeginTransaction()
 		apachelogs.ReadErrorLog(fLogError[i], InsertError, Error)
 		CommitTransaction()
-		log.Printf("%5.0f%% Loaded %s", completed, fLogError[i])
+		log.Printf("%5.0f%% Loaded %s (%d records total)", completed, fLogError[i], errorId)
 	}
 }
 
